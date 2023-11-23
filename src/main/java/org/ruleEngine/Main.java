@@ -22,7 +22,7 @@ public class Main{
         QueryCounter queryCounter = new QueryCounter();
         queryCounter.startCount();
 
-        EventListener listener = new EventListener();
+        BackgroundServerStarter listener = new BackgroundServerStarter();
         listener.init(ruleManager);
 
         ruleManager.removeRule(new QueryCountRule());

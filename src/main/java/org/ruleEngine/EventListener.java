@@ -1,31 +1,34 @@
 package org.ruleEngine;
 
-import java.util.concurrent.*;
+import org.ruleEngine.Rule.Rule;
 
-public class EventListener {
-    public boolean isHandlingStarted = false;
-    public volatile boolean queryCounterTrigger;
-    public volatile boolean memoryFillingStarted ;
+import java.util.Queue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
-//    public final ArrayBlockingQueue m_queue = new ArrayBlockingQueue<>();
-    public ScheduledExecutorService eventHandlerExecutorService;
-    public EventListener(){
-        this.queryCounterTrigger = QueryCounter.isQueryCountingStarted();
-        this.memoryFillingStarted = MemoryFiller.isMemoryFillingStarted();
-        this.eventHandlerExecutorService = Executors.newSingleThreadScheduledExecutor();
-    };
-    public void startHandling( RuleManager ruleManager){
-        eventHandlerExecutorService.scheduleAtFixedRate(new EventHandler(ruleManager), 5, 5, TimeUnit.SECONDS);
-        isHandlingStarted = true;
+
+public class EventListener implements Runnable{
+    public RuleManager ruleManager;
+    public EventListener(RuleManager ruleManager){
+        this.ruleManager = ruleManager;
     }
-    public void init(RuleManager ruleManager){
-        if(!isHandlingStarted){
-            startHandling(ruleManager);
+    private static final ExecutorService executorService = Executors.newFixedThreadPool(10);
+
+    @Override
+    public void run() {
+        System.out.println("Running Event Handler, HEAP USAGE: " + (Runtime.getRuntime().maxMemory() - Runtime.getRuntime().freeMemory()) / (1024 * 1024));
+        System.out.println("Query count is: " + QueryCounter.queryCounter);
+//        ArrayList<Event> desiredRules = ruleManager.getRules();
+        Queue<Rule> firedRules = ruleManager.fillUpFiredRules(ruleManager.getRules());
+        if(!firedRules.isEmpty()){
+           for(Rule event : firedRules) {
+               executorService.submit(() -> EventListener.this.handleEvent(event));
+           }
         }
+        firedRules.clear();
     }
-
-//    public void listen(Event event){
-//        m_queue.add(event);
-//    }
+    public void handleEvent(Rule event){
+        event.handle();
+    }
 
 }
